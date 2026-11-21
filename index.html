@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mac AI 专线防护</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{color-scheme:light}
+body{margin:0}
+img{max-width:100%}
+/* Layout: one reading column with a wiring diagram; sections read like a field manual. */
+:root{
+  --bg:#EDF1F3; --surface:#FFFFFF; --ink:#0F1B24; --muted:#56656F; --line:#C7D2D9;
+  --accent:#0B7A83; --accent-soft:#D5ECEE;
+  --claude:#D9643A; --agy:#7A5AE0;
+  --ok:#2E8A4F; --warn:#B7791F; --bad:#C2413A;
+  --f-head:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --f-body:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E161C; --surface:#152029; --ink:#E4ECF0; --muted:#97A7B2; --line:#2A3A45;
+  --accent:#3FC1CA; --accent-soft:#16343A; --claude:#F08A62; --agy:#A68BFF;
+  --ok:#5CC27F; --warn:#E3A84A; --bad:#EE6F67; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E161C; --surface:#152029; --ink:#E4ECF0; --muted:#97A7B2; --line:#2A3A45;
+  --accent:#3FC1CA; --accent-soft:#16343A; --claude:#F08A62; --agy:#A68BFF;
+  --ok:#5CC27F; --warn:#E3A84A; --bad:#EE6F67; color-scheme:dark}
+
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.75;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:860px;margin:0 auto;padding-block:48px 80px;display:grid;gap:56px}
+h1,h2,h3{font-family:var(--f-head);text-wrap:balance;margin:0;line-height:1.3}
+h1{font-size:clamp(30px,6vw,46px);font-weight:900;letter-spacing:.01em}
+h2{font-size:24px;font-weight:900}
+h3{font-size:17px;font-weight:700}
+p{margin:0;max-width:65ch}
+.mono{font-family:var(--f-mono);font-size:.85em}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+section{display:grid;gap:18px}
+.lead{font-size:18px;color:var(--muted)}
+.tag{display:inline-block;font-family:var(--f-mono);font-size:12px;padding:1px 8px;border-radius:4px;border:1px solid currentColor;line-height:1.7;white-space:nowrap}
+.c{color:var(--claude)} .a{color:var(--agy)}
+code{font-family:var(--f-mono);font-size:.86em;background:var(--accent-soft);padding:1px 5px;border-radius:4px;word-break:break-all}
+
+header{display:grid;gap:16px}
+.goals{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+.goal{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:8px 12px;font-size:14px}
+.goal b{color:var(--accent)}
+
+.diagram{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow-x:auto;padding:12px}
+.diagram svg{display:block;min-width:720px;width:100%;height:auto}
+.diagram text{font-family:var(--f-body);fill:var(--ink)}
+.diagram .sm{font-size:11px;fill:var(--muted)}
+.cap{font-size:14px;color:var(--muted)}
+
+.layers{display:grid;gap:0;border-top:1px solid var(--line)}
+.layer{display:grid;grid-template-columns:150px 1fr;gap:18px;padding:18px 0;border-bottom:1px solid var(--line)}
+.layer .k{font-family:var(--f-mono);font-size:12px;color:var(--muted);letter-spacing:.06em;padding-top:3px}
+.layer .k b{display:block;font-family:var(--f-head);font-size:16px;color:var(--ink);letter-spacing:0}
+.layer .v{display:grid;gap:8px;min-width:0}
+.layer ul{margin:0;padding-left:1.2em;display:grid;gap:4px}
+@media (max-width:620px){.layer{grid-template-columns:1fr;gap:6px}}
+
+.cases{display:grid;gap:10px}
+.case{display:grid;grid-template-columns:6px 1fr;background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.case .bar{background:var(--sev)}
+.case .body{padding:14px 16px;display:grid;gap:6px;min-width:0}
+.case .row{display:grid;grid-template-columns:72px 1fr;gap:10px;font-size:15px}
+.case .row span:first-child{font-family:var(--f-mono);font-size:12px;color:var(--muted);padding-top:3px}
+.sev-ok{--sev:var(--ok)} .sev-warn{--sev:var(--warn)} .sev-bad{--sev:var(--bad)}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+
+.apps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.app{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px;display:grid;gap:8px;align-content:start;min-width:0}
+.app p{font-size:15px}
+@media (max-width:720px){.apps{grid-template-columns:1fr}}
+
+.gaps{margin:0;padding:0;list-style:none;display:grid;gap:10px}
+.gaps li{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start}
+.gaps li::before{content:"△";color:var(--warn);font-size:14px;padding-top:3px}
+
+.steps{margin:0;padding:0;list-style:none;counter-reset:s;display:grid;gap:14px}
+.steps li{counter-increment:s;display:grid;grid-template-columns:40px 1fr;gap:12px}
+.steps li::before{content:counter(s,decimal-leading-zero);font-family:var(--f-mono);font-weight:600;color:var(--accent);font-size:15px;padding-top:2px}
+.steps li div{display:grid;gap:4px;min-width:0}
+
+.rules{background:var(--accent-soft);border-radius:8px;padding:18px 20px;display:grid;gap:8px}
+.rules ul{margin:0;padding-left:1.2em;display:grid;gap:4px}
+footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">Field notes · macOS · 2026.11</div>
+  <h1>Mac AI 专线防护</h1>
+  <p class="lead">给 <span class="c">Claude 桌面版</span> 和 <span class="a">Google Antigravity</span> 单独搭的一条“台湾专线”。它要做到三件事：</p>
+  <div class="goals">
+    <div class="goal"><b>只走台湾出口</b>，不会悄悄换成别的国家</div>
+    <div class="goal"><b>节点不乱跳</b>，选定一个稳的就一直用</div>
+    <div class="goal"><b>出事就停</b>，宁可断网也不裸连、不泄露真实地址</div>
+  </div>
+</header>
+
+<section>
+  <div class="eyebrow">01 · 整体结构</div>
+  <h2>一条数据怎么走</h2>
+  <p>电脑上同时有两条路。被保护的两个 App 走上面那条专线；其他程序（浏览器、Codex 等）照常走代理客户端的普通路线。DNS 守护在旁边盯着，发现 DNS 出问题就先把两个 App 锁住。</p>
+  <div class="diagram" role="img" aria-label="数据路径示意图">
+    <svg viewBox="0 0 760 330" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" style="fill:var(--muted)"/>
+        </marker>
+      </defs>
+      <!-- lane labels -->
+      <text x="20" y="26" class="sm">受保护的路线</text>
+      <text x="20" y="196" class="sm">普通路线</text>
+      <!-- protected lane -->
+      <rect x="20" y="40" width="150" height="62" rx="8" style="fill:var(--bg);stroke:var(--line)"/>
+      <text x="95" y="66" text-anchor="middle" style="font-size:14px;fill:var(--claude);font-weight:700">Claude</text>
+      <text x="95" y="86" text-anchor="middle" style="font-size:14px;fill:var(--agy);font-weight:700">Antigravity</text>
+
+      <rect x="210" y="40" width="160" height="62" rx="8" style="fill:var(--accent-soft);stroke:var(--accent)"/>
+      <text x="290" y="66" text-anchor="middle" style="font-size:14px;font-weight:700">ProxyBridge</text>
+      <text x="290" y="86" text-anchor="middle" class="sm">按程序名强制分流</text>
+
+      <rect x="410" y="40" width="160" height="62" rx="8" style="fill:var(--accent-soft);stroke:var(--accent)"/>
+      <text x="490" y="66" text-anchor="middle" style="font-size:14px;font-weight:700">本地台湾专线</text>
+      <text x="490" y="86" text-anchor="middle" class="sm">打分 · 粘住 · 拉黑</text>
+
+      <rect x="610" y="40" width="130" height="62" rx="8" style="fill:var(--bg);stroke:var(--line)"/>
+      <text x="675" y="66" text-anchor="middle" style="font-size:14px;font-weight:700">台湾节点</text>
+      <text x="675" y="86" text-anchor="middle" class="sm">出口必须是 TW</text>
+
+      <line x1="170" y1="71" x2="208" y2="71" style="stroke:var(--muted);stroke-width:1.5" marker-end="url(#ar)"/>
+      <line x1="370" y1="71" x2="408" y2="71" style="stroke:var(--muted);stroke-width:1.5" marker-end="url(#ar)"/>
+      <text x="389" y="62" text-anchor="middle" class="sm">TCP</text>
+      <line x1="570" y1="71" x2="608" y2="71" style="stroke:var(--muted);stroke-width:1.5" marker-end="url(#ar)"/>
+
+      <!-- UDP block -->
+      <line x1="290" y1="102" x2="290" y2="128" style="stroke:var(--bad);stroke-width:1.5" marker-end="url(#ar)"/>
+      <rect x="230" y="130" width="120" height="30" rx="6" style="fill:none;stroke:var(--bad);stroke-dasharray:4 3"/>
+      <text x="290" y="150" text-anchor="middle" style="font-size:12px;fill:var(--bad)">UDP 一律拦掉</text>
+
+      <!-- checks above line -->
+      <rect x="410" y="122" width="330" height="38" rx="6" style="fill:none;stroke:var(--line);stroke-dasharray:3 3"/>
+      <text x="575" y="146" text-anchor="middle" class="sm">每 5 秒体检：出口国家 / Claude 能否连 / 谷歌能否连</text>
+      <line x1="490" y1="102" x2="490" y2="120" style="stroke:var(--line);stroke-width:1.2"/>
+
+      <!-- normal lane -->
+      <rect x="20" y="210" width="150" height="56" rx="8" style="fill:var(--bg);stroke:var(--line)"/>
+      <text x="95" y="234" text-anchor="middle" style="font-size:14px;font-weight:700">其他程序</text>
+      <text x="95" y="253" text-anchor="middle" class="sm">浏览器 · Codex …</text>
+
+      <rect x="210" y="210" width="360" height="56" rx="8" style="fill:var(--bg);stroke:var(--line)"/>
+      <text x="390" y="234" text-anchor="middle" style="font-size:14px;font-weight:700">代理客户端 TUN（落云 / mihomo 内核）</text>
+      <text x="390" y="253" text-anchor="middle" class="sm">接管全机流量与 DNS，按客户端自己的规则走</text>
+
+      <rect x="610" y="210" width="130" height="56" rx="8" style="fill:var(--bg);stroke:var(--line)"/>
+      <text x="675" y="234" text-anchor="middle" style="font-size:14px;font-weight:700">机场节点</text>
+      <text x="675" y="253" text-anchor="middle" class="sm">不固定国家</text>
+      <line x1="170" y1="238" x2="208" y2="238" style="stroke:var(--muted);stroke-width:1.5" marker-end="url(#ar)"/>
+      <line x1="570" y1="238" x2="608" y2="238" style="stroke:var(--muted);stroke-width:1.5" marker-end="url(#ar)"/>
+
+      <!-- DNS guard -->
+      <rect x="20" y="288" width="720" height="32" rx="6" style="fill:none;stroke:var(--warn);stroke-dasharray:6 4"/>
+      <text x="380" y="309" text-anchor="middle" style="font-size:12px;fill:var(--warn)">DNS 守护：一直盯着系统 DNS；一旦掉到不可信的服务器，先锁住 Claude 和 Antigravity，再处理</text>
+    </svg>
+  </div>
+  <p class="cap">手机上可以左右滑动看图。</p>
+</section>
+
+<section>
+  <div class="eyebrow">02 · 每一层</div>
+  <h2>各部分分别做什么</h2>
+  <div class="layers">
+    <div class="layer">
+      <div class="k">底座<b>代理客户端 TUN</b></div>
+      <div class="v">
+        <p>用的是基于 mihomo 内核的客户端，开 TUN 模式，全机流量和 DNS 都被它接管。DNS 只用国外的加密 DNS，<b>不用国内 DNS</b>。</p>
+        <p>它用的是 “fake-ip” 模式：程序问域名时先拿到一个假地址（<code>198.18.x.x</code>）。这对普通程序没问题，但会坑到下面的专线：专线是另一个独立的 mihomo，看不懂这些假地址，就连不上。</p>
+        <p>解决办法：把 Claude、谷歌、GitHub 的域名加进客户端的 <code>fake-ip-filter</code>（假地址白名单），让这些域名拿到真实地址。比如 <code>+.claude.ai</code>、<code>+.anthropic.com</code>、<code>+.googleapis.com</code>、<code>+.gstatic.com</code>、<code>+.github.com</code>。</p>
+      </div>
+    </div>
+    <div class="layer">
+      <div class="k">分流<b>ProxyBridge</b></div>
+      <div class="v">
+        <p>一个能按“程序名”强制转发流量的小工具。配置里写了 4 条规则：</p>
+        <ul>
+          <li><span class="tag c">Claude</span> TCP → 本地台湾专线的端口</li>
+          <li><span class="tag c">Claude</span> UDP → 直接拦截</li>
+          <li><span class="tag a">Antigravity</span> TCP → 本地台湾专线</li>
+          <li><span class="tag a">Antigravity</span> UDP → 直接拦截</li>
+        </ul>
+        <p>拦 UDP 是为了堵住 QUIC、WebRTC 这类可能绕开代理的通道。它用 LaunchAgent 开机自动启动，挂了会被拉起来。</p>
+      </div>
+    </div>
+    <div class="layer">
+      <div class="k">核心<b>本地台湾专线</b></div>
+      <div class="v">
+        <p>自己写的一个 Python 脚本，在本机再起一个 mihomo，里面只放台湾节点。规则是“稳字当头”：</p>
+        <ul>
+          <li>给每个节点打分，记一个 0–100 的“信任分”。</li>
+          <li>选定一个就<b>粘住不放</b>，不会因为别的节点快一点就换。只有当前这个真的坏了才换下一个最稳的。</li>
+          <li>每 5 秒体检一次：出口是不是台湾、Claude 能不能连上。</li>
+          <li>每 30 秒查一次谷歌（给 Antigravity 用）。连续 3 次连不上，就拿备用节点试；备用能连才换。如果所有节点都连不上谷歌，说明是谷歌自己的问题，不乱换。</li>
+          <li>出过问题的节点进“黑名单”1 小时，期间不用它。</li>
+          <li>状态写进一个 JSON 文件，面板和弹窗都读这个文件，所以三处显示的是同一个结论。</li>
+        </ul>
+      </div>
+    </div>
+    <div class="layer">
+      <div class="k">兜底<b>DNS 守护</b></div>
+      <div class="v">
+        <p>后台常驻的脚本，只检查系统当前用的 DNS 服务器是不是可信的那几个。</p>
+        <p>如果客户端崩了、DNS 掉回系统默认，它会<b>先锁住两个 App</b>（把程序文件设为不可打开，并结束正在运行的进程），然后才启用应急 DNS。等一切恢复正常，自动解锁。先锁再动，保证这段时间两个 App 不会用错误的网络连出去。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">03 · 意外情况</div>
+  <h2>出了事会怎样</h2>
+  <div class="legend"><span><i style="background:var(--ok)"></i>自动处理，无感</span><span><i style="background:var(--warn)"></i>还能用，但会提醒</span><span><i style="background:var(--bad)"></i>主动断开，保护优先</span></div>
+  <div class="cases">
+    <div class="case sev-ok"><div class="bar"></div><div class="body">
+      <h3>当前台湾节点卡了或掉线</h3>
+      <div class="row"><span>程序</span><span>换到下一个最稳的台湾节点，坏节点拉黑 1 小时。</span></div>
+      <div class="row"><span>你看到</span><span>面板上节点名字变了，别的不用管。</span></div>
+    </div></div>
+    <div class="case sev-ok"><div class="bar"></div><div class="body">
+      <h3>某个节点出口突然不是台湾了</h3>
+      <div class="row"><span>程序</span><span>体检发现国家不对，立刻拉黑并换掉。</span></div>
+      <div class="row"><span>你看到</span><span>同上，面板会写明换掉的原因。</span></div>
+    </div></div>
+    <div class="case sev-ok"><div class="bar"></div><div class="body">
+      <h3>节点能连 Claude，但连不上谷歌</h3>
+      <div class="row"><span>程序</span><span>连续 3 次失败后对比备用节点；备用能连谷歌才换。谷歌整体挂了就不动。</span></div>
+      <div class="row"><span>你看到</span><span>面板提示“刚才连不上谷歌”。</span></div>
+    </div></div>
+    <div class="case sev-warn"><div class="bar"></div><div class="body">
+      <h3>ProxyBridge 停了</h3>
+      <div class="row"><span>程序</span><span>两个 App 改走客户端的普通路线：仍然在代理里，但不保证是台湾。</span></div>
+      <div class="row"><span>你看到</span><span>弹窗和面板会提示“专用保护没开”，用安全启动打开时会拦住。</span></div>
+    </div></div>
+    <div class="case sev-bad"><div class="bar"></div><div class="body">
+      <h3>所有台湾节点都不能用</h3>
+      <div class="row"><span>程序</span><span>专线没有出口，两个 App 连不上网，<b>不会</b>改走其他国家。</span></div>
+      <div class="row"><span>你看到</span><span>持续 45 秒以上才弹窗（避免一闪而过的误报），恢复后再弹一次“专线好了”。</span></div>
+    </div></div>
+    <div class="case sev-bad"><div class="bar"></div><div class="body">
+      <h3>代理客户端崩溃，DNS 掉回系统默认</h3>
+      <div class="row"><span>程序</span><span>DNS 守护先锁住两个 App 并结束进程，再启用应急 DNS；恢复后自动解锁。</span></div>
+      <div class="row"><span>你看到</span><span>弹窗“已锁定”；这段时间 App 打不开，属于正常保护。</span></div>
+    </div></div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">04 · 小工具</div>
+  <h2>看得见的部分</h2>
+  <p>后台跑的东西看不见，所以做了三个 SwiftUI 小程序，都读同一份状态文件。</p>
+  <div class="apps">
+    <div class="app"><h3>AI 网络状态</h3><p>一个面板，一句话总结现在能不能放心用，下面列出 DNS、启动锁、ProxyBridge、当前台湾节点和信任分。</p></div>
+    <div class="app"><h3>开启提醒</h3><p>常驻后台的弹窗。只有三种状态：正常、已锁定、专线断了。断线要持续 45 秒才提醒。</p></div>
+    <div class="app"><h3>安全打开</h3><p>启动器，<span class="c">Claude</span> 和 <span class="a">Antigravity</span> 各一个。打开前逐项检查 DNS、断网保护、专线节点，Antigravity 多查一项谷歌。全部通过才打开 App，有一项不过就不打开并说明原因。</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">05 · 取舍</div>
+  <h2>目前没管到的地方</h2>
+  <ul class="gaps">
+    <li><span>只保护这两个桌面 App。浏览器、Codex 等走客户端的普通路线，仍有客户端的 TUN 和 DNS 保护，只是不锁定台湾。这是有意的选择，管得越多越容易出问题。</span></li>
+    <li><span>Antigravity 走专线时，只能打开谷歌和 GitHub 相关的网站。别的网站拿到的是假地址，专线连不上。要用别的网站，得把域名加进假地址白名单。</span></li>
+    <li><span>Antigravity 附带的命令行工具没有被单独保护。</span></li>
+    <li><span>没有改系统防火墙（pf）这类系统级设置。万一 ProxyBridge 停了，靠的是提醒和启动检查，不是硬拦截。</span></li>
+  </ul>
+</section>
+
+<section>
+  <div class="eyebrow">06 · 自己搭一套</div>
+  <h2>大致步骤</h2>
+  <ol class="steps">
+    <li><div><h3>先把底座弄好</h3><p>代理客户端开 TUN，DNS 换成国外加密 DNS，确认没有国内 DNS。</p></div></li>
+    <li><div><h3>加假地址白名单</h3><p>把要保护的 App 会用到的域名写进 <code>fake-ip-filter</code>。改完重启客户端。</p></div></li>
+    <li><div><h3>起一个只有台湾节点的本地 mihomo</h3><p>写个脚本定时体检：出口国家、目标网站能否连通。按“稳定优先、坏了才换、坏的拉黑一段时间”的思路选节点，把结果写进状态文件。</p></div></li>
+    <li><div><h3>按程序分流</h3><p>装 ProxyBridge，规则写成目标 App 的 TCP 走本地专线端口、UDP 拦截，用 LaunchAgent 开机自启。</p></div></li>
+    <li><div><h3>加 DNS 兜底</h3><p>后台脚本盯着系统 DNS，出问题时先锁住 App，再切应急 DNS，恢复后解锁。</p></div></li>
+    <li><div><h3>做提醒和启动器</h3><p>可选，但很有用。都读同一个状态文件，避免几个地方说法不一。</p></div></li>
+    <li><div><h3>逐个故障演练</h3><p>查出口 IP；手动让一个节点失效，看会不会换；关掉 ProxyBridge，看提醒和启动器会不会拦住。</p></div></li>
+  </ol>
+</section>
+
+<section>
+  <div class="rules">
+    <h3>几条底线</h3>
+    <ul>
+      <li>任何时候都不用国内 DNS。唯一例外是应急 DNS，而且启用前必须先锁住 App。</li>
+      <li>改任何配置前先备份旧文件，改坏了能直接换回去。</li>
+      <li>改重要脚本时留一个“几分钟后自动还原”的保险，确认新版正常再取消。</li>
+      <li>出问题时宁可断网，也不要让 App 自动换到别的路线。</li>
+    </ul>
+  </div>
+</section>
+
+<footer>个人在 macOS 上的折腾笔记，只讲思路，不含账号、订阅和节点信息。照着做之前，先按你自己的客户端和节点情况调整。</footer>
+</div>
+
+</body>
+</html>
